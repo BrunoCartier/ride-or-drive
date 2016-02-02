@@ -14,8 +14,15 @@ SMS_URL = 'https://smsapi.free-mobile.fr/sendmsg'
 WEATHER_URL = 'http://api.wunderground.com/api/{}/hourly/q/FR/La_Rochelle.json'.format(WEATHER_KEY)
 MESSAGE = 'Probabilités de pluie :\n' \
           '9h={}%, 10h={}%, 11h={}%\n' \
-          '17h={}%, 18h={}%, 19h={}%\n' \
-          'Donc, matin={}%, aprèm={}%.'
+          '17h={}%, 18h={}%, 19h={}%\n\n' \
+          'Donc, matin={}%, aprèm={}%.\n\n' \
+          '{}'
+INSTRUCTIONS = [
+    'Laisse la voiture, il y a peu de chances qu\'il pleuve :D',
+    'Quelques chances de pluie. Tu peux y aller, mais attention :o',
+    'Wotch, y\'a pas mal de chances pour que ça pleuve. Voiture conseillée :/',
+]
+THRESHOLDS = [33, 50]
 
 
 def send_sms(text):
@@ -63,6 +70,14 @@ def send_weather(weather):
     evening = [int(weather['17']), int(weather['18']), int(weather['19'])]
     evening_average = round(sum(evening) / len(evening), 2)
 
+    max_probability = max(morning_average, evening_average)
+    if max_probability < THRESHOLDS[0]:
+        instruction = INSTRUCTIONS[0]
+    elif max_probability < THRESHOLDS[1]:
+        instruction = INSTRUCTIONS[1]
+    else:
+        instruction = INSTRUCTIONS[2]
+
     send_sms(MESSAGE.format(
         weather['9'],
         weather['10'],
@@ -71,7 +86,8 @@ def send_weather(weather):
         weather['18'],
         weather['19'],
         morning_average,
-        evening_average
+        evening_average,
+        instruction,
     ))
 
 
