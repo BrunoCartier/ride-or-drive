@@ -2,3 +2,4 @@
 
 SMS_USER = '<Enter your SMS service user>'
 SMS_KEY = '<Enter your SMS API key>'
+WEATHER_KEY = '<Enter your Wunderground API key>'
