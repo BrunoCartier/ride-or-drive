@@ -11,10 +11,10 @@ from urllib.error import HTTPError
 from config import SMS_USER, SMS_KEY, WEATHER_KEY
 
 SMS_URL = 'https://smsapi.free-mobile.fr/sendmsg'
-WEATHER_URL = 'http://api.wunderground.com/api/{}/hourly/q/FR/La_Rochelle.json'.format(WEATHER_KEY)
+WEATHER_URL = 'http://api.wunderground.com/api/{}/hourly/q/FR/zmw:00000.1.07316.json'.format(WEATHER_KEY)
 MESSAGE = 'Probabilités de pluie :\n' \
-          '9h={}%, 10h={}%, 11h={}%\n' \
-          '17h={}%, 18h={}%, 19h={}%\n\n' \
+          '{}, {}, {}\n' \
+          '{}, {}, {}\n\n' \
           'Donc, matin={}%, aprèm={}%.\n\n' \
           '{}'
 INSTRUCTIONS = [
@@ -23,6 +23,7 @@ INSTRUCTIONS = [
     'Wotch, y\'a pas mal de chances pour que ça pleuve. Voiture conseillée :/',
 ]
 THRESHOLDS = [33, 50]
+WANTED_HOURS = ['8', '9', '10', '16', '17', '18']
 
 
 def send_sms(text):
@@ -45,7 +46,6 @@ def send_sms(text):
 def fetch_weather():
     req = request.Request(url=WEATHER_URL)
     out = {}
-    wanted_hours = ['9', '10', '11', '17', '18', '19']
 
     try:
         with request.urlopen(req) as response:
@@ -54,7 +54,7 @@ def fetch_weather():
             for hour_info in data['hourly_forecast']:
                 hour = hour_info['FCTTIME']['hour']
 
-                if hour in wanted_hours and hour not in out:
+                if hour in WANTED_HOURS and hour not in out:
                     out[hour] = hour_info['pop']
 
             return out
@@ -64,10 +64,24 @@ def fetch_weather():
 
 
 def send_weather(weather):
-    morning = [int(weather['9']), int(weather['10']), int(weather['11'])]
+    def make_percentage(hour):
+        return '{}h={}%'.format(
+            hour,
+            weather[hour]
+        )
+
+    morning = [
+        int(weather[WANTED_HOURS[0]]),
+        int(weather[WANTED_HOURS[1]]),
+        int(weather[WANTED_HOURS[2]]),
+    ]
     morning_average = round(sum(morning) / len(morning), 2)
 
-    evening = [int(weather['17']), int(weather['18']), int(weather['19'])]
+    evening = [
+        int(weather[WANTED_HOURS[3]]),
+        int(weather[WANTED_HOURS[4]]),
+        int(weather[WANTED_HOURS[5]]),
+    ]
     evening_average = round(sum(evening) / len(evening), 2)
 
     max_probability = max(morning_average, evening_average)
@@ -79,12 +93,12 @@ def send_weather(weather):
         instruction = INSTRUCTIONS[2]
 
     send_sms(MESSAGE.format(
-        weather['9'],
-        weather['10'],
-        weather['11'],
-        weather['17'],
-        weather['18'],
-        weather['19'],
+        make_percentage(WANTED_HOURS[0]),
+        make_percentage(WANTED_HOURS[1]),
+        make_percentage(WANTED_HOURS[2]),
+        make_percentage(WANTED_HOURS[3]),
+        make_percentage(WANTED_HOURS[4]),
+        make_percentage(WANTED_HOURS[5]),
         morning_average,
         evening_average,
         instruction,
